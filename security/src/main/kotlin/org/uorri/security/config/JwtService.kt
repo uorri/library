@@ -1,0 +1,88 @@
+package org.uorri.security.config
+
+import io.jsonwebtoken.Claims
+import io.jsonwebtoken.JwtParser
+import io.jsonwebtoken.Jwts
+import io.jsonwebtoken.security.Keys
+import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.stereotype.Service
+import org.uorri.common.dto.UserCreds
+import org.uorri.common.entity.User
+import reactor.core.publisher.Mono
+import java.nio.charset.StandardCharsets
+import java.time.Duration.ofMinutes
+import java.time.Instant.now
+import java.util.*
+import javax.crypto.SecretKey
+
+@Service
+class JwtService(
+    val passwordEncoder: PasswordEncoder
+) {
+    private val key: SecretKey = Keys.hmacShaKeyFor(
+        "ThisIsMySecretKey123!@#hmcacSnaKeyThisIs!2234".toByteArray(StandardCharsets.UTF_8)
+    )
+    private val parser: JwtParser = Jwts.parserBuilder().setSigningKey(key).build()
+
+    fun getAuthResponse(user: Mono<User>): Mono<AuthResponse> {
+        return user.map { u ->
+            val accessToken: String = generateAccessToken(u)
+            val refreshToken: String = generateRefreshToken(u)
+            AuthResponse(accessToken, refreshToken)
+        }
+    }
+
+    fun validateUser(userCredsMono: Mono<UserCreds>, userMono: Mono<User>): Mono<AuthResponse> {
+        return userMono.flatMap { user ->
+            userCredsMono.flatMap { userCreds ->
+                val passwordFromDb = Mono.just(user.password)
+                passwordFromDb.flatMap { password ->
+                    if (passwordEncoder.matches(userCreds.password, password)) {
+                        getAuthResponse(Mono.just(user))
+                    } else {
+                        Mono.error(IllegalArgumentException("Invalid password"))
+                    }
+                }
+            }
+        }
+    }
+
+    private fun generateAccessToken(user: User): String {
+        val expiration = now().plus(ofMinutes(ACCESS_TOKEN_EXPIRATION_MINUTES))
+        return generateToken(user, Date.from(expiration))
+    }
+
+    private fun generateRefreshToken(user: User): String {
+        val expiration = now().plus(ofMinutes(REFRESH_TOKEN_EXPIRATION_MINUTES))
+        return generateToken(user, Date.from(expiration))
+    }
+
+    fun getClaims(token: String): Claims {
+        return parser.parseClaimsJws(token.replace("Bearer ", "")).body
+    }
+
+    fun getRoleId(token: String): Int {
+        val roleId = getClaims(token)["roles"]
+        return if (roleId is Int) roleId else 0
+    }
+
+    fun getLoginByToken(token: String): String {
+        return getClaims(token).subject
+    }
+
+    private fun generateToken(user: User, expiration: Date): String {
+        return Jwts.builder()
+            .setSubject(user.login)
+            .claim("roles", user.roleId)
+            .setIssuedAt(Date.from(now()))
+            .setExpiration(expiration)
+            .signWith(key)
+            .compact()
+    }
+
+    companion object {
+        private const val ACCESS_TOKEN_EXPIRATION_MINUTES = 15L
+        private const val REFRESH_TOKEN_EXPIRATION_MINUTES = 30L
+    }
+
+}

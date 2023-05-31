@@ -19,6 +19,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation(project(":users"))
+    implementation(project(":books"))
     testImplementation(kotlin("test"))
 }
 

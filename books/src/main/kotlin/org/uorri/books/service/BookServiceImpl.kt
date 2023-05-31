@@ -1,6 +1,7 @@
 package org.uorri.books.service
 
 import org.springframework.stereotype.Service
+import org.uorri.books.BookDetails
 import org.uorri.books.repository.BookRepository
 import org.uorri.common.entity.Book
 import reactor.core.publisher.Flux
@@ -12,6 +13,10 @@ class BookServiceImpl(val bookRepository: BookRepository) : BookService{
         return bookRepository.findAll()
     }
 
+    override fun getBookDetailsById(id: Long) : Mono<BookDetails> {
+        return bookRepository.findBookDetailsById(id)
+    }
+
     override fun createBook(book: Mono<Book>): Mono<Book> {
         return book.flatMap { bookRepository.save(it) }
     }
@@ -20,7 +25,4 @@ class BookServiceImpl(val bookRepository: BookRepository) : BookService{
         return book.flatMap { bookRepository.deleteById(it.id) }
     }
 
-    override fun getBooksByCostIn(range: IntRange): Flux<Book> {
-        return bookRepository.getBooksByCostIsIn(range)
-    }
 }

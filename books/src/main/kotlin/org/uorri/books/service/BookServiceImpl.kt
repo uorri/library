@@ -1,6 +1,5 @@
 package org.uorri.books.service
 
-import org.jooq.DSLContext
 import org.springframework.r2dbc.core.DatabaseClient
 import org.springframework.stereotype.Service
 import org.uorri.books.BookDetails

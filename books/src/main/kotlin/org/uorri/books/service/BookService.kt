@@ -7,9 +7,10 @@ import reactor.core.publisher.Mono
 
 interface BookService {
 
-    fun getAllBooks(): Flux<Book>
+    fun getAllBooks(): Flux<BookDetails>
     fun createBook(book: Mono<Book>): Mono<Book>
     fun removeBook(book: Mono<Book>): Mono<Void>
-    fun getBookDetailsById(id: Long) : Mono<BookDetails>
+
+    fun getBookById(id: Long): Mono<BookDetails>
 
 }

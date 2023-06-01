@@ -4,7 +4,7 @@ import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.http.codec.multipart.FilePart
 import org.springframework.web.bind.annotation.*
-import org.uorri.common.dto.UserCreds
+import org.uorri.common.dto.LoginCredentials
 import org.uorri.common.dto.UserDetails
 import org.uorri.common.entity.User
 import org.uorri.security.config.AuthResponse
@@ -22,7 +22,7 @@ class UserController(
     private val avatarService: AvatarService
 ) {
     @PostMapping("/avatar")
-    fun image(
+    fun setAvatar(
         @RequestHeader("Authorization") token: String,
         @RequestPart(value = "file", required = false) filePartMono: Mono<FilePart>
     ): Mono<Void> {
@@ -37,9 +37,9 @@ class UserController(
     }
 
     @PostMapping("/login")
-    fun login(@RequestBody userCreds: Mono<UserCreds>): Mono<ResponseEntity<AuthResponse>> {
-        val user: Mono<User> = userService.getUser(userCreds)
-        return jwtService.validateUser(userCreds, user).map { ResponseEntity.ok(it) }
+    fun login(@RequestBody loginCredentials: LoginCredentials): Mono<ResponseEntity<AuthResponse>> {
+        val user: Mono<User> = userService.getUser(loginCredentials)
+        return jwtService.getAuthResponse(loginCredentials, user).map { ResponseEntity.ok(it) }
     }
 
     @GetMapping("/avatar", produces = [MediaType.IMAGE_PNG_VALUE])

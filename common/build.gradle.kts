@@ -14,9 +14,9 @@ repositories {
 
 dependencies {
     api("org.springframework.boot:spring-boot-starter-data-r2dbc")
-    implementation("org.liquibase:liquibase-core")
+    runtimeOnly("org.postgresql:r2dbc-postgresql")
     runtimeOnly("org.postgresql:postgresql")
-    runtimeOnly("org.postgresql:r2dbc-postgresql:1.0.1.RELEASE")
+    implementation("org.liquibase:liquibase-core")
     testImplementation(kotlin("test"))
 }
 

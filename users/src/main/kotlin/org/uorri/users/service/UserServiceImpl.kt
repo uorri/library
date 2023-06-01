@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.uorri.common.dto.UserCreds
+import org.uorri.common.dto.LoginCredentials
 import org.uorri.common.entity.User
 import org.uorri.common.dto.UserDetails
 import org.uorri.common.dto.UserDto
@@ -40,8 +40,8 @@ class UserServiceImpl(
         roleId = userRoleId
     )
 
-    override fun getUser(userCreds: Mono<UserCreds>): Mono<User> {
-        return userCreds.flatMap { userRepository.findByLogin(it.login) }
+    override fun getUser(loginCredentials: LoginCredentials): Mono<User> {
+        return userRepository.findByLogin(loginCredentials.login)
     }
 
     override fun getInfoByUser(login: String): Mono<UserDto> {

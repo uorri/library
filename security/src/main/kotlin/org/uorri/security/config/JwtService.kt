@@ -6,7 +6,7 @@ import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
-import org.uorri.common.dto.UserCreds
+import org.uorri.common.dto.LoginCredentials
 import org.uorri.common.entity.User
 import reactor.core.publisher.Mono
 import java.nio.charset.StandardCharsets
@@ -14,6 +14,7 @@ import java.time.Duration.ofMinutes
 import java.time.Instant.now
 import java.util.*
 import javax.crypto.SecretKey
+
 
 @Service
 class JwtService(
@@ -24,36 +25,28 @@ class JwtService(
     )
     private val parser: JwtParser = Jwts.parserBuilder().setSigningKey(key).build()
 
-    fun getAuthResponse(user: Mono<User>): Mono<AuthResponse> {
-        return user.map { u ->
-            val accessToken: String = generateAccessToken(u)
-            val refreshToken: String = generateRefreshToken(u)
-            AuthResponse(accessToken, refreshToken)
-        }
+    fun getAuthResponseByUser(user: User): AuthResponse {
+        val accessToken: String = generateToken(user)
+        return AuthResponse(accessToken)
     }
 
-    fun validateUser(userCredsMono: Mono<UserCreds>, userMono: Mono<User>): Mono<AuthResponse> {
+    fun getAuthResponse(userMono: Mono<User>): Mono<AuthResponse> {
+        return userMono.flatMap { Mono.just(getAuthResponseByUser(it)) }
+    }
+
+    fun getAuthResponse(loginCredentials: LoginCredentials, userMono: Mono<User>): Mono<AuthResponse> {
         return userMono.flatMap { user ->
-            userCredsMono.flatMap { userCreds ->
-                val passwordFromDb = Mono.just(user.password)
-                passwordFromDb.flatMap { password ->
-                    if (passwordEncoder.matches(userCreds.password, password)) {
-                        getAuthResponse(Mono.just(user))
-                    } else {
-                        Mono.error(IllegalArgumentException("Invalid password"))
-                    }
-                }
+            val passwordMatches = passwordEncoder.matches(loginCredentials.password, user.password)
+            if (passwordMatches) {
+                Mono.just(getAuthResponseByUser(user))
+            } else {
+                Mono.error(IllegalArgumentException("Invalid credentials"))
             }
         }
     }
 
-    private fun generateAccessToken(user: User): String {
+    private fun generateToken(user: User): String {
         val expiration = now().plus(ofMinutes(ACCESS_TOKEN_EXPIRATION_MINUTES))
-        return generateToken(user, Date.from(expiration))
-    }
-
-    private fun generateRefreshToken(user: User): String {
-        val expiration = now().plus(ofMinutes(REFRESH_TOKEN_EXPIRATION_MINUTES))
         return generateToken(user, Date.from(expiration))
     }
 

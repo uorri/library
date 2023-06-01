@@ -15,8 +15,8 @@ class BookController(
 ) {
 
     @GetMapping()
-    fun getAllBooks(): Flux<ResponseEntity<Book>> {
-        return bookService.getAllBooks().map { ResponseEntity.ok(it) }
+    fun getAllBooks(): Flux<BookDetails> {
+        return bookService.getAllBooks()
     }
 
     @PostMapping
@@ -26,7 +26,7 @@ class BookController(
 
     @GetMapping("/{id}")
     fun getBookDetailsById(@PathVariable id: Long) : Mono<BookDetails>{
-        return bookService.getBookDetailsById(id)
+        return bookService.getBookById(id)
     }
 
 

@@ -1,13 +1,13 @@
 package org.uorri.books
 
-import org.uorri.common.entity.Genre
-import org.uorri.common.entity.User
+import java.math.BigDecimal
 
 data class BookDetails(
-    val id: Long,
     val title: String,
-    val cost: Float,
-    val pageCount: Int,
-    val author: User,
-    val genres: Set<Genre>
+    val cost: BigDecimal,
+    val pageCount: BigDecimal,
+    val authorFirstName: String,
+    val authorLastName: String,
+    val authorLogin: String,
+    val genres: String
 )

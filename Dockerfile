@@ -1,4 +1,4 @@
-FROM adoptopenjdk/openjdk17:alpine-jre
+FROM amazoncorretto:17
 
 WORKDIR /app
 

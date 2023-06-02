@@ -13,6 +13,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: uorriuart
+      POSTGRES_HOST_AUTH_METHOD: trust
       POSTGRES_DB: library
     ports:
       - "5432:5432"

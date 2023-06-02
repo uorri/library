@@ -1,53 +1,27 @@
 package org.uorri.books.service
 
-import org.springframework.r2dbc.core.DatabaseClient
+import com.uorri.common.db.Tables
+import org.jooq.DSLContext
+import org.jooq.Record7
+import org.jooq.impl.DSL
 import org.springframework.stereotype.Service
-import org.uorri.books.BookDetails
-import org.uorri.books.mapper.BookMapper
-import org.uorri.books.repository.BookRepository
-import org.uorri.common.entity.Book
+import org.uorri.common.dto.BookDto
+import org.uorri.common.dto.UserDto
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Service
 class BookServiceImpl(
-    val bookRepository: BookRepository,
-    val bookMapper: BookMapper,
-    val client: DatabaseClient
+    val r2dbcDSLContext: DSLContext
 ) : BookService {
 
-    override fun getAllBooks(): Flux<BookDetails> {
-        val query = baseQuery.plus(
-            "GROUP BY b.title, b.cost, b.page_count, u.first_name, u.last_name, u.login;"
-        )
-        return client.sql(query).map(bookMapper::apply).all()
-    }
+    val b = Tables.BOOKS
+    val bg = Tables.BOOKS_GENRES
+    val g = Tables.GENRES
+    val u = Tables.USERS
 
-    override fun createBook(book: Mono<Book>): Mono<Book> {
-        return book.flatMap { bookRepository.save(it) }
-    }
-
-    override fun removeBook(book: Mono<Book>): Mono<Void> {
-        return book.flatMap { bookRepository.deleteById(it.id) }
-    }
-
-    override fun getBookById(id: Long): Mono<BookDetails> {
-        val query = baseQuery.plus(
-            """
-                WHERE b.id = :id
-                GROUP BY b.title, b.cost, b.page_count, u.first_name, u.last_name, u.login;
-                """
-        )
-        return client.sql(query).bind("id", id).map(bookMapper::apply).one()
-    }
-
-    /*fun getBookDetails(bookId: Long): BookDetails {
-        val b = Tables.BOOKS
-        val bg = Tables.BOOKS_GENRES
-        val g = Tables.GENRES
-        val u = Tables.USERS
-
-        val result = r2dbcDSLContext
+    override fun getBooks(): Flux<BookDto> {
+        val query = r2dbcDSLContext
             .select(
                 b.TITLE,
                 b.COST,
@@ -55,47 +29,64 @@ class BookServiceImpl(
                 u.FIRST_NAME,
                 u.LAST_NAME,
                 u.LOGIN,
-                g.NAME
+                DSL.arrayAgg(g.NAME).`as`("genres")
+            )
+            .from(b)
+            .join(u).on(b.AUTHOR_ID.eq(u.ID))
+            .join(bg).on(b.ID.eq(bg.BOOK_ID))
+            .join(g).on(bg.GENRE_ID.eq(g.ID))
+            .groupBy(
+                b.TITLE,
+                b.COST,
+                b.PAGE_COUNT,
+                u.FIRST_NAME,
+                u.LAST_NAME,
+                u.LOGIN
+            )
+
+        return Flux.from(query).map { it.toBookDto() }
+    }
+
+    override fun getBookDetails(bookId: Int): Mono<BookDto> {
+        val query = r2dbcDSLContext
+            .select(
+                b.TITLE,
+                b.COST,
+                b.PAGE_COUNT,
+                u.FIRST_NAME,
+                u.LAST_NAME,
+                u.LOGIN,
+                DSL.arrayAgg(g.NAME).`as`("genres")
             )
             .from(b)
             .join(u).on(b.AUTHOR_ID.eq(u.ID))
             .join(bg).on(b.ID.eq(bg.BOOK_ID))
             .join(g).on(bg.GENRE_ID.eq(g.ID))
             .where(b.ID.eq(bookId))
-            .fetchGroups(
-                { it.into(b) },
-                { it.into(g.NAME) }
+            .groupBy(
+                b.TITLE,
+                b.COST,
+                b.PAGE_COUNT,
+                u.FIRST_NAME,
+                u.LAST_NAME,
+                u.LOGIN
             )
 
-        val bookRecord = result.keys.first()
-        val genreRecords = result[bookRecord]
+        return Mono.from(query).map { it.toBookDto() }
+    }
 
-        val author = User(
-            bookRecord.get(u.FIRST_NAME),
-            bookRecord.get(u.LAST_NAME),
-            bookRecord.get(u.LOGIN)
+    private fun Record7<String, Double, Int, String, String, String, Array<String>>.toBookDto() =
+        BookDto(
+            title = get(b.TITLE),
+            cost = get(b.COST),
+            pageCount = get(b.PAGE_COUNT),
+            author = UserDto(
+                firstName = get(u.FIRST_NAME),
+                lastName = get(u.LAST_NAME),
+                login = get(u.LOGIN)
+            ),
+            genres = (get("genres") as Array<String>).toSet()
         )
-
-        val genres = genreRecords?.map { GenreDto(it) }?.toSet()
-
-        return BookDetails(
-            bookRecord.get(b.TITLE),
-            bookRecord.get(b.COST).toFloat(),
-            bookRecord.get(b.PAGE_COUNT),
-            author,
-            genres
-        )
-    }*/
-
-    val baseQuery = """
-            SELECT b.title, b.cost::numeric, b.page_count::numeric, 
-            u.first_name, u.last_name, u.login, 
-            string_agg(g.name, ', ') AS genres
-            FROM books b
-             JOIN books_genres bg ON b.id = bg.book_id
-             JOIN genres g ON bg.genre_id = g.id
-             JOIN users u ON b.author_id = u.id
-            """
 
 
 }

@@ -17,6 +17,12 @@ tasks.test {
     useJUnitPlatform()
 }
 
+tasks.jar {
+    manifest {
+        attributes["Main-Class"] = "org.uorri.app.Application"
+    }
+}
+
 kotlin {
     jvmToolchain(8)
 }

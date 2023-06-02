@@ -27,14 +27,14 @@ CREATE TABLE books
     title      VARCHAR NOT NULL,
     cost       FLOAT   NOT NULL,
     page_count INT     NOT NULL,
-    author_id  BIGINT  NOT NULL,
+    author_id  INT  NOT NULL,
     CONSTRAINT fk_author FOREIGN KEY (author_id) REFERENCES users (id)
 );
 
 CREATE TABLE books_genres
 (
-    book_id  BIGINT NOT NULL,
-    genre_id BIGINT NOT NULL,
+    book_id  INT NOT NULL,
+    genre_id INT NOT NULL,
     PRIMARY KEY (book_id, genre_id),
     CONSTRAINT fk_book FOREIGN KEY (book_id) REFERENCES books (id),
     CONSTRAINT fk_genre FOREIGN KEY (genre_id) REFERENCES genres (id)
